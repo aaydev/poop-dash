@@ -524,8 +524,12 @@
   wrap.addEventListener('pointermove', e => { if (state === 'play' || state === 'boss') moveTo(e.clientX); });
   wrap.addEventListener('pointerdown', e => {
     if (state === 'play' || state === 'boss') moveTo(e.clientX);
+    if (e.cancelable) e.preventDefault();
     const now = performance.now();
-    if (state === 'play' && now - lastTap < 300 && now - lastShotFire > 250){
+    const r = cvs.getBoundingClientRect();
+    const tx = (e.clientX - r.left) / r.width * W, ty = (e.clientY - r.top) / r.height * H;
+    if (state === 'play' || state === 'boss') rings.push({ x: tx, y: ty, r: 4, life: 10, color: '#ffffff' });
+    if (state === 'play' && now - lastTap < 450 && now - lastShotFire > 250){
       shots.push({ x: player.x, y: player.y - 26 });
       lastShotFire = now; buzz();
     }

@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Беги, какашка!</title>
 <style>
-  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#111; font-family:system-ui, sans-serif; }
-  #pd-root { width:100%; max-width:380px; margin:0 auto; user-select:none; -webkit-user-select:none; color:#eee; }
+  html, body { height:100%; }
+  body { margin:0; height:100vh; height:100dvh; display:flex; align-items:center; justify-content:center; background:#111; font-family:system-ui, sans-serif; overflow:hidden; }
+  #pd-root { width:100%; max-width:480px; height:100%; margin:0 auto; display:flex; flex-direction:column; user-select:none; -webkit-user-select:none; color:#eee; }
   #pd-root button { font: inherit; }
-  .pd-hud { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .pd-hud { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex:0 0 auto; }
   .pd-score { font-size:28px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.1; }
   .pd-best { font-size:12px; color:#999; }
-  .pd-wrap { position:relative; border:1px solid #333; border-radius:12px; overflow:hidden; touch-action:none; background:#181818; }
-  canvas { display:block; width:100%; height:auto; cursor:pointer; }
+  .pd-wrap { position:relative; flex:1 1 auto; min-height:0; border:1px solid #333; border-radius:12px; overflow:hidden; touch-action:none; background:#181818; }
+  canvas { display:block; width:100%; height:100%; cursor:pointer; }
   .pd-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(20,20,20,.82); text-align:center; padding:16px; }
   .pd-overlay h2 { margin:0; font-size:20px; font-weight:600; }
   .pd-overlay p { margin:0; font-size:14px; color:#aaa; }
@@ -64,7 +65,23 @@
 
   const cvs = document.getElementById('pdCanvas');
   const ctx = cvs.getContext('2d');
-  const W = cvs.width, H = cvs.height;
+  let W = 360, H = 440;
+  const wrap = document.getElementById('pdWrap');
+  function resize(){
+    const r = wrap.getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.max(240, Math.round(r.width));
+    H = Math.max(320, Math.round(r.height));
+    cvs.width = Math.round(W * dpr);
+    cvs.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    player.y = H - 48;
+    player.x = Math.min(Math.max(22, player.x), W - 22);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function(){ setTimeout(resize, 200); });
+  if (tg && tg.onEvent) tg.onEvent('viewportChanged', resize);
   const scoreEl = document.getElementById('pdScore');
   const bestEl = document.getElementById('pdBest');
   const startOv = document.getElementById('pdStart');
@@ -159,6 +176,7 @@
   }
 
   function start(){
+    resize();
     score = 0; items = []; particles = []; frame = 0; lastSpawn = 0;
     scoreEl.textContent = '0';
     player.x = W / 2;
@@ -191,7 +209,6 @@
   });
   window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-  const wrap = document.getElementById('pdWrap');
   function moveTo(clientX){
     const r = cvs.getBoundingClientRect();
     player.x = Math.max(22, Math.min(W - 22, (clientX - r.left) / r.width * W));

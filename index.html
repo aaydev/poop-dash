@@ -53,7 +53,7 @@
       <h2>Беги, какашка!</h2>
       <p>10 уровней · каждый на 30 секунд длиннее · 10 мини-боссов · финал — Король Унитаз. Всего 3 жизни на всю игру!</p>
       <div class="pd-legend">
-        <span>🌽 +15</span><span>❤️ 3 жизни</span><span>💩 → стреляет в босса</span>
+        <span>🌽 +15</span><span>❤️ 3 жизни</span><span>+1 ❤️ за уровень</span><span>💩 → стреляет в босса</span>
       </div>
       <p style="font-size:12px;">стрелки / A·D / палец · пробел — действие</p>
       <button class="pd-btn" id="pdStartBtn">Играть</button>
@@ -173,6 +173,11 @@
   let level = 1, score = 0, hearts = 3;
   let levelElapsed = 0, levelDur = 60000, runElapsed = 0;
   let items = [], bullets = [], ebullets = [], particles = [];
+  let floats = [], rings = [];
+  let shakeUntil = 0, shakeMag = 0, flashUntil = 0, flashColor = '255,255,255';
+  let introFrom = null;
+  function shake(mag, dur, t){ shakeMag = mag; shakeUntil = (t || performance.now()) + dur; }
+  function flash(dur, color){ flashUntil = performance.now() + dur; flashColor = color || '255,255,255'; }
   let boss = null, lastSpawn = 0, lastShot = 0, invulnUntil = 0, lastT = 0, frame = 0;
 
   let best = 0, maxLevel = 1;
@@ -206,6 +211,7 @@
   function hitPlayer(t){
     if (t < invulnUntil) return;
     hearts--; invulnUntil = t + 1600;
+    shake(7, 250, t); flash(180, '255,80,80');
     burst(player.x, player.y, '💥', 12); buzz('err');
     heartsEl.textContent = '❤️'.repeat(Math.max(0,hearts)) + '🖤'.repeat(3-Math.max(0,hearts));
     if (hearts <= 0) gameOver();
@@ -262,8 +268,10 @@
   function bossHit(t){
     boss.hp--;
     score += 50; scoreEl.textContent = score;
+    floats.push({ x: boss.x, y: boss.y - 34, ch: '-1 HP', life: 30, color: '#ff8a65' });
     burst(boss.x, boss.y - 20, '✨', 5); buzz();
     if (boss.hp <= 0){
+      shake(13, 500, t); flash(320); rings.push({ x: boss.x, y: boss.y, r: 12, life: 32, color: '#ffd54f' });
       burst(boss.x, boss.y, '💥', 24); burst(boss.x, boss.y, boss.emoji, 8);
       buzz('ok');
       score += 500 + level * 100; scoreEl.textContent = score;
@@ -278,7 +286,8 @@
   function startLevel(){
     resize();
     state = 'play';
-    items = []; bullets = []; ebullets = []; particles = []; boss = null;
+    items = []; bullets = []; ebullets = []; particles = []; floats = []; rings = []; boss = null;
+    introFrom = null;
     levelElapsed = 0; lastSpawn = 0; invulnUntil = 0;
     levelDur = (level * 30 + 30) * 1000;
     heartsEl.textContent = '❤️'.repeat(hearts) + '🖤'.repeat(3-hearts);
@@ -293,13 +302,16 @@
   }
   function levelClear(){
     state = 'clear';
+    hearts = Math.min(3, hearts + 1);
+    heartsEl.textContent = '❤️'.repeat(hearts) + '🖤'.repeat(3 - hearts);
     $('pdClearTitle').textContent = 'Уровень ' + level + ' пройден! 🎉';
     $('pdClearText').innerHTML = bossDefeatedText();
     $('pdClear').classList.remove('hidden');
   }
   function bossDefeatedText(){
     const B = BOSSES[level-1];
-    return 'Босс «' + B.name + '» повержен!<br>Бонус: +' + (500 + level*100) + ' очков.<br>Дальше — уровень ' + (level+1) + ': «' + THEMES[level].name + '» (' + fmt((level*30 + 60) * 1000) + ')' + (level+1 === 10 ? ' и финальный босс!' : '');
+    const lifeTxt = hearts >= 3 ? '❤️ жизни полные (макс. 3)' : '+1 ❤️ жизнь восстановлена!';
+    return 'Босс «' + B.name + '» повержен!<br>Бонус: +' + (500 + level*100) + ' очков · ' + lifeTxt + '<br>Дальше — уровень ' + (level+1) + ': «' + THEMES[level].name + '» (' + fmt((level*30 + 60) * 1000) + ')' + (level+1 === 10 ? ' и финальный босс!' : '');
   }
   function nextLevel(){ level++; startLevel(); }
   function gameOver(){
@@ -312,6 +324,7 @@
   function retryLevel(){ startGame(); }
   function victory(){
     state = 'win';
+    flash(500); rings.push({ x: W/2, y: H*0.4, r: 20, life: 40, color: '#ffd54f' }); rings.push({ x: W/2, y: H*0.4, r: 8, life: 55, color: '#ffffff' });
     const mins = Math.floor(runElapsed/60000), secs = Math.round(runElapsed/1000)%60;
     $('pdWinText').innerHTML = 'Счёт: <b>' + score + '</b> · рекорд: <b>' + best + '</b><br>Время пути: ' + mins + ' мин ' + secs + ' сек';
     $('pdWin').classList.remove('hidden');
@@ -339,6 +352,9 @@
 
     // фон
     drawBg();
+    ctx.save();
+    if (t < shakeUntil) ctx.translate((Math.random()-0.5)*shakeMag, (Math.random()-0.5)*shakeMag);
+    if (state === 'play' && introFrom === null) introFrom = t;
 
     if (state === 'play'){
       levelElapsed += dt;
@@ -367,7 +383,7 @@
       emoji(it.ch, it.x, it.y, it.s, it.corn ? it.rot : 0);
       const dx = it.x - player.x, dy = it.y - player.y;
       if (Math.abs(dx) < (it.s + player.w)/2 - 6 && Math.abs(dy) < (it.s + player.h)/2 - 6){
-        if (it.corn){ score += 15; scoreEl.textContent = score; burst(it.x, it.y, '✨'); buzz(); }
+        if (it.corn){ score += 15; scoreEl.textContent = score; burst(it.x, it.y, '✨'); buzz(); floats.push({ x: it.x, y: it.y - 14, ch: '+15', life: 40, color: '#ffd54f' }); }
         else { hitPlayer(t); }
         items.splice(i, 1); continue;
       }
@@ -422,7 +438,50 @@
       const blink = t < invulnUntil && Math.floor(t/90) % 2 === 0;
       const bob = Math.sin(frame/8) * 2.5;
       if (!blink) emoji('💩', player.x, player.y + bob, player.h + 4, Math.sin(frame/20)*0.08);
+      if (frame % 4 === 0) particles.push({ x: player.x + (Math.random()-0.5)*10, y: player.y + 16, vx: 0, vy: 1.6, life: 18, ch: '💨', s: 9 });
     }
+
+    // всплывающие надписи
+    for (let i = floats.length - 1; i >= 0; i--){
+      const f = floats[i]; f.y -= 1.2; f.life--;
+      ctx.save(); ctx.globalAlpha = Math.max(0, f.life / 40);
+      ctx.font = '600 15px system-ui'; ctx.textAlign = 'center';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(f.ch, f.x, f.y);
+      ctx.fillStyle = f.color; ctx.fillText(f.ch, f.x, f.y); ctx.restore();
+      if (f.life <= 0) floats.splice(i, 1);
+    }
+
+    // ударные кольца
+    for (let i = rings.length - 1; i >= 0; i--){
+      const r = rings[i]; r.r += 6; r.life--;
+      ctx.save(); ctx.globalAlpha = Math.max(0, r.life / 32);
+      ctx.strokeStyle = r.color; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 6.29); ctx.stroke(); ctx.restore();
+      if (r.life <= 0) rings.splice(i, 1);
+    }
+
+    // интро уровня
+    if (state === 'play' && introFrom !== null){
+      const k = (t - introFrom) / 1800;
+      if (k < 1){
+        const a = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+        const sc = 1.5 - 0.5 * Math.min(1, k * 3);
+        ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center';
+        ctx.translate(W/2, H*0.38); ctx.scale(sc, sc);
+        ctx.font = '700 30px system-ui'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,.7)';
+        ctx.strokeText('Уровень ' + level, 0, 0); ctx.fillStyle = '#fff'; ctx.fillText('Уровень ' + level, 0, 0);
+        ctx.font = '600 19px system-ui';
+        ctx.strokeText(theme().name, 0, 32); ctx.fillStyle = '#ffd54f'; ctx.fillText(theme().name, 0, 32);
+        ctx.restore();
+      }
+    }
+
+    // вспышка
+    if (t < flashUntil){
+      ctx.fillStyle = 'rgba(' + flashColor + ',' + Math.max(0, 0.55 * (flashUntil - t) / 300) + ')';
+      ctx.fillRect(-20, -20, W + 40, H + 40);
+    }
+    ctx.restore();
   }
 
   // ---------- Управление ----------

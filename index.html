@@ -51,7 +51,7 @@
     <div class="pd-overlay" id="pdStart">
       <div class="pd-big">💩</div>
       <h2>Беги, какашка!</h2>
-      <p>10 уровней · каждый длиннее предыдущего · в конце каждого ждёт свой мини-босс. Доживи до Короля Унитаза!</p>
+      <p>10 уровней · каждый на 30 секунд длиннее · 10 мини-боссов · финал — Король Унитаз. Всего 3 жизни на всю игру!</p>
       <div class="pd-legend">
         <span>🌽 +15</span><span>❤️ 3 жизни</span><span>💩 → стреляет в босса</span>
       </div>
@@ -70,7 +70,7 @@
       <div class="pd-big">🌀</div>
       <h2>Смыто!</h2>
       <p id="pdOverText"></p>
-      <button class="pd-btn" id="pdRetryBtn">Повторить уровень</button>
+      <button class="pd-btn" id="pdRetryBtn">Начать заново</button>
     </div>
 
     <div class="pd-overlay hidden" id="pdWin">
@@ -149,6 +149,23 @@
 
   const player = { x: W/2, y: H-48, w: 34, h: 34, speed: 5.2 };
   const keys = {};
+  const bgs = [];
+  for (let i = 1; i <= 10; i++){ const im = new Image(); im.src = 'bg' + i + '.png'; bgs.push(im); }
+  let bgX = 0;
+  function drawBg(){
+    const im = bgs[level-1];
+    if (im && im.complete && im.naturalWidth){
+      const s = Math.max(W / im.width, H / im.height);
+      const dw = im.width * s, dh = im.height * s, dy = (H - dh) / 2;
+      let x = -(bgX % dw); if (x > 0) x -= dw;
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(im, x, dy, dw, dh);
+      if (x + dw < W) ctx.drawImage(im, x + dw, dy, dw, dh);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = theme().bg; ctx.fillRect(0, 0, W, H);
+    }
+  }
   let state = 'menu'; // menu | play | boss | clear | over | win
   let level = 1, score = 0, hearts = 3;
   let levelElapsed = 0, levelDur = 60000, runElapsed = 0;
@@ -265,7 +282,7 @@
     state = 'play';
     items = []; bullets = []; ebullets = []; particles = []; boss = null;
     levelElapsed = 0; lastSpawn = 0; invulnUntil = 0;
-    levelDur = level * 60000;
+    levelDur = (level * 30 + 30) * 1000;
     heartsEl.textContent = '❤️'.repeat(hearts) + '🖤'.repeat(3-hearts);
     levelEl.textContent = 'Уровень ' + level + '/10 · ' + theme().name;
     timeEl.textContent = fmt(levelDur);
@@ -284,17 +301,17 @@
   }
   function bossDefeatedText(){
     const B = BOSSES[level-1];
-    return 'Босс «' + B.name + '» повержен!<br>Бонус: +' + (500 + level*100) + ' очков.<br>Дальше — уровень ' + (level+1) + ': «' + THEMES[level].name + '» (' + (level+1) + ' мин)' + (level+1 === 10 ? ' и финальный босс!' : '');
+    return 'Босс «' + B.name + '» повержен!<br>Бонус: +' + (500 + level*100) + ' очков.<br>Дальше — уровень ' + (level+1) + ': «' + THEMES[level].name + '» (' + fmt((level*30 + 60) * 1000) + ')' + (level+1 === 10 ? ' и финальный босс!' : '');
   }
   function nextLevel(){ level++; startLevel(); }
   function gameOver(){
     state = 'over';
     if (score > best) { best = score; bestEl.textContent = best; }
     try { localStorage.setItem('pd_best', best); localStorage.setItem('pd_maxlevel', Math.max(maxLevel, level)); } catch(e){}
-    $('pdOverText').innerHTML = 'Босс «' + BOSSES[level-1].name + '» оказался сильнее.<br>Счёт: <b>' + score + '</b> · уровень: <b>' + level + '/10</b>';
+    $('pdOverText').innerHTML = 'Три жизни закончились — игра окончена.<br>Счёт: <b>' + score + '</b> · уровень: <b>' + level + '/10</b>';
     $('pdOver').classList.remove('hidden');
   }
-  function retryLevel(){ hearts = 3; startLevel(); }
+  function retryLevel(){ startGame(); }
   function victory(){
     state = 'win';
     const mins = Math.floor(runElapsed/60000), secs = Math.round(runElapsed/1000)%60;
@@ -323,8 +340,8 @@
     }
 
     // фон и декорации
-    ctx.fillStyle = theme().bg;
-    ctx.fillRect(0, 0, W, H);
+    bgX += 0.12;
+    drawBg();
     ensureDecos();
     for (const d of decos){
       d.y += d.v;
@@ -346,6 +363,8 @@
       if (remain < 10000 && Math.floor(t/400) % 2 === 0){
         ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = '#ffd54f';
         ctx.font = '600 18px system-ui'; ctx.textAlign = 'center';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.65)';
+        ctx.strokeText('⚠️ ' + BOSSES[level-1].name + ' близко!', W/2, H/2 - 20);
         ctx.fillText('⚠️ ' + BOSSES[level-1].name + ' близко!', W/2, H/2 - 20); ctx.restore();
       }
     }

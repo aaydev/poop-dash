@@ -2,6 +2,14 @@
 
 **Poop Dash** is a fun, fast-paced arcade survival game where you control a little poop character trying to survive through 10 increasingly challenging levels and defeat the ultimate enemy — the Toilet King! 🚽👑
 
+🚀 **Play directly in Telegram!**
+
+You can play Poop Dash instantly without installing anything. Just open the Telegram Mini App:
+
+👉 **[Play Poop Dash on Telegram](https://t.me/poopdash_bot/poopdash)**
+
+*Available on Telegram for desktop and mobile.*
+
 Collect corn, dodge obstacles, fight crazy bosses, and prove that you're the ultimate sewer survivor!
 
 ## 🎮 Game Features

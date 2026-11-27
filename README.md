@@ -12,6 +12,8 @@ You can play Poop Dash instantly without installing anything. Just open the Tele
 
 Collect corn, dodge obstacles, fight crazy bosses, and prove that you're the ultimate sewer survivor!
 
+![poop-dash-title]([https://example.com](https://raw.githubusercontent.com/aaydev/poop-dash/refs/heads/main/title.jpg))
+
 ## 🎮 Game Features
 
 - **10 unique levels** — travel through highways, forests, clouds, deserts, oceans, space, cities, lava lands, icy wastelands, and the Sewer Throne.
